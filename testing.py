@@ -1,6 +1,7 @@
-def trying_this():
-     pass
+import math
 
+a = 4
+b = 3
+c = a * b
 
-def ok():
-     pass
+print(c)
