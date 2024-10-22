@@ -1,4 +1,4 @@
-import db_base as db  # Import the base class from db_base.py
+import db_base as db
 
 class AirAsiaDatabase(db.DBbase):
     def __init__(self, db_name='AirAsiaTicketingDB.sqlite'):
