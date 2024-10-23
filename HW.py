@@ -227,12 +227,15 @@ class Project:
         # Define available options for user interactions
         flight_options = {
             "get": "Get all flights",
+            "get_passenger": "Get all passenger information",
             "getby": "Get flight by user ID",
             "update": "Update flights",
             "add": "Add flights",
             "delete": "Delete flights",
             "reset": "Reset database",
             "exit": "Exit program"
+
+
         }
 
         print("Welcome to the flight selection program, please choose a selection")  # Welcome message
@@ -257,6 +260,16 @@ class Project:
                 else:
                     print("No flights available.")  # Message if no flights exist
 
+            if user_selection == "get_passenger":
+                results = self.user.fetch_user()  # Fetch passenger
+                if results:
+                    for item in results:
+                        # Print user details
+                        print(f"User ID: {item[0]}, First Name: {item[1]}, "
+                              f"Last Name: {item[2]}, Email: {item[3]}")
+                else:
+                    print("No associated passenger.")  # Message if no user exist
+
             elif user_selection == "getby":
                 flight_id = input("Enter flight ID: ")  # Prompt for flight ID
                 result = self.flight.fetch_flight(flight_id)  # Fetch flight by ID
@@ -276,7 +289,10 @@ class Project:
 
             elif user_selection == "add":
                 # Prompt for flight details to add
-                flight_id = input("Flight ID: ")
+                try:
+                    flight_id = float(input("Flight ID: "))
+                except Exception as e:  # Catch any exceptions that occur during the insert
+                    print(e)  # Print the exception message
                 airport_to = input("Enter airport to: ")
                 departure_date = input("Enter departure date: ")
                 departure_gate = input("Enter departure gate: ")
