@@ -18,7 +18,7 @@ class DBbase:
         self._cursor.executescript(sql_string)
 
     def reset_database(self):
-        raise NotImplementedError("Must. implement from derived class")
+        raise NotImplementedError("Must implement from derived class")
 
     def close_db(self):
         self._conn.close()
