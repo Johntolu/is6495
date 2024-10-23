@@ -11,28 +11,28 @@ class Flight:
         self.arrival_gate = row[4]  # Read arrival gate from the row
         self.price = row[5]  # Read price as a single value from the row
 
-class Flight_mod(db.DBbase):
-    # Define a class that inherits from DBbase for handling CSV operations related to flight data
-
-    def reset_or_create_db(self):
-        # Method to drop and recreate the Flight table in the database
-        try:
-            sql = """
-                DROP TABLE IF EXISTS Flight;  
-
-                CREATE TABLE Flight (
-                    flight_id INTEGER NOT NULL PRIMARY KEY,  
-                    airport_to TEXT NOT NULL,                
-                    departure_date TEXT NOT NULL,            
-                    departure_gate TEXT NOT NULL,            
-                    arrival_gate TEXT NOT NULL,              
-                    price INTEGER                            
-                );
-            """
-            super().execute_script(sql)  # Execute the SQL script to drop and create the table
-
-        except Exception as e:  # Catch any exceptions that occur
-            print(e)  # Print the exception message
+# class Flight_mod(db.DBbase):
+#     # Define a class that inherits from DBbase for handling CSV operations related to flight data
+#
+#     def reset_or_create_db(self):
+#         # Method to drop and recreate the Flight table in the database
+#         try:
+#             sql = """
+#                 DROP TABLE IF EXISTS Flight;
+#
+#                 CREATE TABLE Flight (
+#                     flight_id INTEGER NOT NULL PRIMARY KEY,
+#                     airport_to TEXT NOT NULL,
+#                     departure_date TEXT NOT NULL,
+#                     departure_gate TEXT NOT NULL,
+#                     arrival_gate TEXT NOT NULL,
+#                     price INTEGER
+#                 );
+#             """
+#             super().execute_script(sql)  # Execute the SQL script to drop and create the table
+#
+#         except Exception as e:  # Catch any exceptions that occur
+#             print(e)  # Print the exception message
 
     def read_flight_data(self, file_name):
         # Method to read flight data from a CSV file
