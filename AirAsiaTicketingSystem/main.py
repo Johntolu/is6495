@@ -91,7 +91,7 @@ def manage_tickets():
     while True:
         print("\n=== Manage Tickets ===")
         print("1. Book a Ticket")
-        print("2. View All Tickets")
+        print("2. View  your Ticket")
         print("3. Update Ticket Information")
         print("4. Cancel a Ticket")
         print("5. Back to Main Menu")
@@ -103,7 +103,7 @@ def manage_tickets():
             ticket_manager.book_ticket()
         elif choice == '2':
             # Call the function to view all tickets
-            ticket_manager.view_tickets()
+            ticket_manager.view_ticket()
         elif choice == '3':
             # Call the function to update a ticket
            ticket_manager.update_ticket()

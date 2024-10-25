@@ -108,7 +108,7 @@ class Ticket(db.DBbase):
 
             if flight_details:
                 print("\n=== Ticket Booked Successfully ===")
-                print(f"Ticket ID: {ticket_id}")
+                print(f"Ticket Num: {ticket_id}")
                 print(f"Passenger: {title} {first_name} {last_name}")
                 print(f"Flight: From {flight_details[0]} To {flight_details[1]}")
                 print(f"  Departure: {flight_details[2]} {flight_details[3]}")
@@ -123,36 +123,166 @@ class Ticket(db.DBbase):
 
 
 
-        # user_id = input("Enter user ID: ")
-        # flight_id = input("Enter flight ID: ")
-        # booking_date = input("Enter booking date (YYYY-MM-DD): ")
-        # price = float(input("Enter price: "))
-        #
-        # try:
-        #     self.get_cursor.execute("""
-        #         INSERT INTO Ticket (user_id, flightID, booking_date, price)
-        #         VALUES (?, ?, ?, ?)""",
-        #         (user_id, flight_id, booking_date, price)
-        #     )
-        #     self.get_connection.commit()  # Commit the transaction
-        #     print("Ticket booked successfully.")
-        # except Exception as e:
-        #     print(f"An error booking ticket occurred: {e}")
 
-    def view_tickets(self):
+    def view_ticket(self):
+        ticket_id=input("Enter your ticket Number")
+
         try:
-            self.get_cursor.execute("SELECT * FROM Ticket")
-            tickets = self.get_cursor.fetchall()
-            for ticket in tickets:
-                print(f"Ticket ID: {ticket[0]}, User ID: {ticket[1]}, Flight ID: {ticket[2]}")
+            # Retrieve ticket details with passenger and flight information
+            super().get_cursor.execute("""
+                SELECT 
+                    Ticket.ticketNum, 
+                    Passenger.title, 
+                    Passenger.firstName, 
+                    Passenger.lastName, 
+                    Flight.airportFrom, 
+                    Flight.airportTo, 
+                    Flight.departureDate, 
+                    Flight.departureTime, 
+                    Ticket.booking_date, 
+                    Ticket.price
+                FROM Ticket
+                JOIN Passenger ON Ticket.user_id = Passenger.user_id
+                JOIN Flight ON Ticket.flightID = Flight.flightID
+                WHERE Ticket.ticketNum = ?
+            """, (ticket_id,))
+
+            tickets = super().get_cursor.fetchall()
+
+            if tickets:
+                for ticket in tickets:
+                    print(f"Ticket Num: {ticket[0]}")
+                    print(f"Passenger: {ticket[1]} {ticket[2]} {ticket[3]}")
+                    print(f"Flight: From {ticket[4]} To {ticket[5]}")
+                    print(f"  Departure: {ticket[6]} {ticket[7]}")
+                    print(f"  Booking Date: {ticket[8]}")
+                    print(f"  Price: ${ticket[9]}")
+                    print("-" * 30)
+            else:
+                print("No tickets found.")
         except Exception as e:
             print(f"Error retrieving tickets: {e}")
 
-    def update_ticket(self, ticket_id):
-        # Implement update logic here
-        pass
+    def update_ticket(self):
+        try:
+            ticket_id=input("Enter your Ticket Number")
+            # Check if the ticket exists
+            super().get_cursor.execute("SELECT ticketNum FROM Ticket WHERE ticketNum = ?", (ticket_id,))
+            if not self.get_cursor.fetchone():
+                print(f"Ticket with ID {ticket_id} does not exist.")
+                return
 
-    def cancel_ticket(self, ticket_id):
-        # Implement delete logic here
-        pass
+            # Display current ticket details
+            self.get_cursor.execute("""
+                SELECT 
+                    Ticket.ticketNum, 
+                    Passenger.title, 
+                    Passenger.firstName, 
+                    Passenger.lastName, 
+                    Flight.airportFrom, 
+                    Flight.airportTo, 
+                    Flight.departureDate, 
+                    Flight.departureTime, 
+                    Ticket.booking_date, 
+                    Ticket.price
+                FROM Ticket
+                JOIN Passenger ON Ticket.user_id = Passenger.user_id
+                JOIN Flight ON Ticket.flightID = Flight.flightID
+                WHERE Ticket.ticketNum = ?
+            """, (ticket_id,))
+
+            ticket = self.get_cursor.fetchone()
+
+            print("=== Current Ticket Details ===")
+            print(f"Ticket ID: {ticket[0]}")
+            print(f"Passenger: {ticket[1]} {ticket[2]} {ticket[3]}")
+            print(f"Flight: From {ticket[4]} To {ticket[5]}")
+            print(f"  Departure: {ticket[6]} {ticket[7]}")
+            print(f"  Booking Date: {ticket[8]}")
+            print(f"  Price: ${ticket[9]}")
+            print("-" * 30)
+
+            try:
+                print("\n=== Available Flights ===")
+                super().get_cursor.execute("""
+                               SELECT flightID, airportFrom, airportTo, departureDate, departureTime 
+                               FROM Flight
+                           """)
+                flights = super().get_cursor.fetchall()
+
+                if flights:
+                    for flight in flights:
+                        print(
+                            f"Flight ID: {flight[0]}, From: {flight[1]} To: {flight[2]}, Departure: {flight[3]} {flight[4]}")
+                    print("-" * 30)
+                else:
+                    print("No available flights at the moment.")
+                    return
+            except Exception as e:
+                print(f"Error retrieving flights: {e}")
+                return
+
+            # Options to update flight or booking date
+            new_flight_id= input("Enter the flight_id of the Flight you want to update to :  ")
+
+
+
+
+            # Verify new flight ID
+            self.get_cursor.execute("SELECT flightID, duration FROM Flight WHERE flightID = ?", (new_flight_id,))
+            flight = self.get_cursor.fetchone()
+
+            if not flight:
+                print("Invalid flight ID.")
+                return
+
+            # Update ticket with new flight ID and recalculate price based on duration
+            new_price = flight[1] * 30
+            self.get_cursor.execute("""
+                UPDATE Ticket 
+                SET flightID = ?, price = ?
+                WHERE ticketNum = ?
+            """, (new_flight_id, new_price, ticket_id))
+
+
+
+            self.get_connection.commit()
+            print("Ticket updated successfully.")
+
+        except Exception as e:
+            print(f"Error updating ticket: {e}")
+
+
+    def cancel_ticket(self):
+        ticket_id = input("Enter your Ticket Number")
+        try:
+            # Check if the ticket exists and retrieve the associated user_id
+            super().get_cursor.execute("SELECT user_id FROM Ticket WHERE ticketNum = ?", (ticket_id,))
+            result = super().get_cursor.fetchone()
+            if not result:
+                print(f"Ticket with ID {ticket_id} does not exist.")
+                return
+
+            user_id = result[0]
+
+            # Confirm cancellation
+            confirm = input(
+                f"Are you sure you want to cancel ticket Num {ticket_id} and delete the associated passenger? (yes/no): ").lower()
+            if confirm != 'yes':
+                print("Cancellation aborted.")
+                return
+
+            # Delete the ticket
+            super().get_cursor.execute("DELETE FROM Ticket WHERE ticketNum = ?", (ticket_id,))
+            super().get_connection.commit()
+
+            # Delete the associated passenger
+            super().get_cursor.execute("DELETE FROM Passenger WHERE user_id = ?", (user_id,))
+            super().get_connection.commit()
+
+            print(f"Ticket Number {ticket_id} and the associated passenger record have been canceled successfully.")
+
+        except Exception as e:
+            print(f"Error canceling ticket: {e}")
+
 
