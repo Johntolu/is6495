@@ -1,9 +1,13 @@
 import db_base as db
 import csv
 
+#creates airticketingsystemdatabase along with tables flight,passenger,ticket and
+#loading them with data from the csv file.
+
 class AirAsiaDatabase(db.DBbase):
     passenger_list=[]
     flight_list=[]
+    ticket_list=[]
 
     def __init__(self, db_name='AirAsiaTicketingDB.sqlite'):
         super().__init__(db_name)
@@ -44,12 +48,12 @@ class AirAsiaDatabase(db.DBbase):
                 );
 
                 CREATE TABLE Ticket (
-                    ticketNum INTEGER  PRIMARY KEY ,
-                    customer_id INTEGER NOT NULL,
+                    ticketNum INTEGER  PRIMARY KEY AUTOINCREMENT ,
+                    user_id INTEGER NOT NULL,
                     flightID INTEGER NOT NULL,
                     booking_date TEXT NOT NULL,
                     price REAL NOT NULL,
-                    FOREIGN KEY (customer_id) REFERENCES Customer(customer_id),
+                    FOREIGN KEY (user_id) REFERENCES Passenger(user_id),
                     FOREIGN KEY (flightID) REFERENCES Flight(flightID)
                 );
 
@@ -62,6 +66,10 @@ class AirAsiaDatabase(db.DBbase):
         except Exception as e:
             print(f"An error occurred: {e}")
 
+
+
+
+#loadind passenger details from passenger_list.csv into db
     def read_passenger_data(self,file_name):
         """Read passenger data from a CSV file and store it in the passenger_list."""
         self.passenger_list = []  # Clear the list before reading new data
@@ -110,7 +118,7 @@ class AirAsiaDatabase(db.DBbase):
 
 
 
-    # Reading flight data from csv file
+#loadind flight detains from flight_list.csv
     def read_flight_data(self, file_name):
         self.flight_list = []  # Clear the list before reading new data
         try:
@@ -118,7 +126,7 @@ class AirAsiaDatabase(db.DBbase):
                 csv_contents = csv.reader(record)  # Create a CSV reader object
                 next(csv_contents)  # Skip the header row
                 for row in csv_contents:# Iterate over the remaining rows in the CSV
-                    flight = {
+                    flight_details = {
                         "flightID": row[0],
                         "airportFrom":row[1],
                         "airportTo":row[2],
@@ -131,28 +139,31 @@ class AirAsiaDatabase(db.DBbase):
                         "arrivalDate":row[9],
                         "arrivalTime":row[10]
                     }
-                    self.flight_list.append(flight)  # Add the flight dictionary to the list
+                    self.flight_list.append(flight_details)  # Add the flight dictionary to the list
 
 
         except Exception as e:  # Catch any exceptions that occur
-            print(f"Error saving passenger: {e}")  # Print the exception message
+            print(f"Error saving flights: {e}")  # Print the exception message
 
-        print(self.flight_list)
+
     def save_flight_to_database(self):
         """Save flight data to the database."""
         for item in self.flight_list:
             try:
+
                 super().get_cursor.execute("""
-                           INSERT INTO Flight (flightID,airportFrom,airportTo,aircraftID,departureDate,
-                           departureTime,departureGate,arrivalGate,duration,arrivalDate,arrivalTime)
-                           VALUES (?, ?, ?, ?, ?, ?, ?,?,?,?,?)""",
+                           INSERT INTO Flight (flightID, airportFrom, airportTo, aircraftID, departureDate,
+                           departureTime, departureGate, arrivalGate, duration, arrivalDate, arrivalTime)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                                            (item["flightID"], item["airportFrom"], item["airportTo"],
-                                            item["aircraftID"], item["departureDate"], item["departureTime"], item["departureGate"],
-                                            item["arrivalGate"],item["duration"],item["arrivalDate"].item["arrivalTime"]))
+                                            item["aircraftID"], item["departureDate"], item["departureTime"],
+                                            item["departureGate"], item["arrivalGate"], item["duration"],
+                                            item["arrivalDate"], item["arrivalTime"]))  # Corrected
                 super().get_connection.commit()  # Commit the transaction
 
+
             except Exception as e:
-                print(f"Error saving flights: {e}")
+                print(f"Error saving flight {item['flightID']}: {e}")
 
     def list_flights(self):
         """List all Flights in the database."""
@@ -165,6 +176,56 @@ class AirAsiaDatabase(db.DBbase):
 
 
 
+
+#loading ticket data into database from ticket_list.csv file
+    def read_ticket_data(self,file_name):
+        """Read ticket data from a CSV file and store it in the ticket_list."""
+        self.ticket_list = []  # Clear the list before reading new data
+
+        try:
+            with open(file_name, 'r') as record:
+                csv_contents = csv.reader(record)
+                next(csv_contents)  # Skip header row
+                for row in csv_contents:
+
+                    ticket_details = {
+                        "user_id": row[0],
+                        "flightID": row[1],
+                        "booking_date": row[2],
+                        "price": row[3]
+                     }
+                    self.ticket_list.append(ticket_details)  # Add ticket_details dictionary to the list
+        except Exception as e:
+            print(f"Error reading CSV: {e}")
+
+    def save_ticket_to_database(self):
+        """Save tickets data to the database."""
+        for item in self.ticket_list:
+            try:
+                super().get_cursor.execute("""
+                        INSERT INTO Ticket (user_id,flightID,booking_date,price)
+                        VALUES (?, ?, ?, ?)""",
+                                           (item["user_id"], item["flightID"], item["booking_date"],
+                                            item["price"]))
+                super().get_connection.commit()  # Commit the transaction
+
+            except Exception as e:
+                print(f"Error saving tickets: {e}")
+
+    def list_tickets(self):
+        """List all tickets in the database."""
+        try:
+            self.get_cursor.execute("SELECT * FROM Ticket")
+            return self.get_cursor.fetchall()  # Return all tickets
+        except Exception as e:
+            print("Error listing Tickets:", e)
+
+
+
+
+
+
+
 # Initialize and set up the database tables and load data
 if __name__ == "__main__":
 
@@ -172,40 +233,37 @@ if __name__ == "__main__":
     airasia_db.reset_database() # Create/reset the database
 
     #loading passenger data from passenger.csv
-    airasia_db.read_passenger_data("Passenger.csv")  # Read data from CSV
+    airasia_db.read_passenger_data("Passenger_list.csv")  # Read data from CSV
     airasia_db.save_passenger_to_database()  # Save data to the database
 
     #loading flight data from flight_list .csv
     airasia_db.read_flight_data("flight_list.csv")  # Read data from CSV
-    airasia_db.save_flight_to_database  #Save data to the database
+    airasia_db.save_flight_to_database()  #Save data to the database
+
+    #loading ticket data from ticket.csv
+    airasia_db.read_ticket_data("ticket_list.csv")  # Read data from CSV
+    airasia_db.save_ticket_to_database()  # Save data to the database
 
 
 
-
-
-    #printing  passengers list
+    # printing  passengers list
     passengers = airasia_db.list_passengers()
     print("Passenger Details")
     for passenger in passengers:
         print(f"Passenger ID: {passenger[0]}, Name: {passenger[2]} {passenger[3]}, Email: {passenger[4]}")
 
-    # printing flight list
-    try:
-        flights = airasia_db.list_flights()
-        if not flights:
-            print("No flights found.")
-        else:
-            print("Flight Details")
-            for flight in flights:
-                print(
-                    f"Flight ID: {flight[0]}, Flight Number: {flight[1]}, Departure: {flight[2]}, Arrival: {flight[3]}")
-    except Exception as e:
-        print(f"An error occurred while retrieving flights: {e}")
 
-    # flights = airasia_db.list_flights()
-    # print("Flight Details")
-    # for flight in flights:
-    #     print(f"Flight ID: {flight[0]}, airportFrom: {flight[2]} ,airportTo {passenger[3]}, aircraftId: {passenger[4]}")
-    #
-    # airasia_db.close_db()  # Close the database connection
+    # printing flight list
+    flights = airasia_db.list_flights()
+    print("Flight Details")
+    for flight in flights:
+        print(f"Flight ID: {flight[0]}, airportFrom: {flight[2]} ,airportTo {flight[3]}, aircraftId: {flight[4]}")
+
+    # printing  ticket list
+    tickets = airasia_db.list_tickets()
+    print("Tickets Details")
+    for ticket in tickets:
+        print(f"Ticket ID: {ticket[0]}, user_ID: {ticket[1]},flightId:{ticket[3]}, bookingDate: {ticket[4]}")
+
+    airasia_db.close_db()  # Close the database connection
 
