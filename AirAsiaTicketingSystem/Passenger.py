@@ -1,217 +1,178 @@
-
-
-# Import the db_base  module for database operations
-
 import db_base as db
+import re  # For regular expression validation
+from datetime import datetime
+
 class Passenger(db.DBbase):
+    valid_titles = {"Mr.", "Ms.", "Mrs.", "Miss", "Dr."}  # Define valid titles
 
-    # Define a class to represent a passenger
     def __init__(self, db_name='AirAsiaTicketingDB.sqlite'):
-            super().__init__(db_name)
+        super().__init__(db_name)
 
+    def validate_date(self, date_str):
+        """Check if the date is in YYYY-MM-DD format."""
+        try:
+            datetime.strptime(date_str, '%Y-%m-%d')
+            return True
+        except ValueError:
+            return False
+
+    def validate_phone(self, phone):
+        """Check if the phone number matches xxx-xxx-xxxx format."""
+        return bool(re.match(r"^\d{3}-\d{3}-\d{4}$", phone))
+
+    def validate_email(self, email):
+        """Check if the email format is valid."""
+        return bool(re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email))
+
+    def validate_age(self, age):
+        """Ensure age is a positive integer."""
+        return age.isdigit() and int(age) > 0
+
+    def email_exists(self, email):
+        """Check if the email already exists in the database."""
+        try:
+            self.get_cursor.execute("SELECT email FROM Passenger WHERE email = ?", (email,))
+            return self.get_cursor.fetchone() is not None
+        except Exception as e:
+            print(f"Error checking email existence: {e}")
+            return False
 
     def add_passenger(self):
-        title = input("Enter Title: ")
+        """Add a new passenger with validation for fields."""
+        while True:
+            title = input("Enter Title: ")
+            if title not in self.valid_titles:
+                print("Error: Invalid title. Valid options are: Mr., Ms., Mrs., Miss, Dr.")
+            else:
+                break
+
         first_name = input("Enter First Name: ")
         last_name = input("Enter Last Name: ")
-        dob = input("Enter Date of Birth (YYYY-MM-DD): ")
-        email = input("Enter Email: ")
-        phone = input("Enter Phone Number: ")
-        age = int(input("Enter Age: "))
-        try:
 
-            super().get_cursor.execute("""
-                INSERT INTO Passenger (title, firstName, lastName, DOB, email, phone, age) VALUES (?, ?, ?,?,?,?,?)""", # Use placeholders to avoid SQL injection
-                                       (title, first_name, last_name, dob, email, phone, age)
+        while True:
+            dob = input("Enter Date of Birth (YYYY-MM-DD): ")
+            if self.validate_date(dob):
+                break
+            print("Error: Invalid date format. Please use YYYY-MM-DD.")
+
+        while True:
+            email = input("Enter Email: ")
+            if not self.validate_email(email):
+                print("Error: Invalid email format. Please enter a valid email.")
+            elif self.email_exists(email):
+                print("Error: Email already exists in the system.")
+            else:
+                break
+
+        while True:
+            phone = input("Enter Phone Number: ")
+            if self.validate_phone(phone):
+                break
+            print("Error: Invalid phone number format. Please use xxx-xxx-xxxx.")
+
+        while True:
+            age = input("Enter Age: ")
+            if self.validate_age(age):
+                age = int(age)  # Convert age to an integer once validated
+                break
+            print("Error: Age must be a positive integer.")
+
+        try:
+            self.get_cursor.execute("""
+                INSERT INTO Passenger (title, firstName, lastName, DOB, email, phone, age)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (title, first_name, last_name, dob, email, phone, age)
             )
-            super().get_connection.commit()  # Commit the transaction to save changes
-            print(f"Added passenger {first_name} {last_name} successfully.")  # Success message
+            self.get_connection.commit()  # Commit the transaction
+            user_id = self.get_cursor.lastrowid  # Retrieve the newly assigned user_id
+            print(f"Added passenger {first_name} {last_name} successfully with User ID: {user_id}")
         except Exception as e:
-            # Print any errors that occur during the insertion
-            print("An error adding passenger occurred:", e)
+            print("An error occurred while adding the passenger:", e)
 
     def update_passenger(self):
-
-        user_id=input("Enter the user_id of the passenger whose details you want to update")
-        #Update user information for a specific user ID.
+        """Update passenger information for a specific user ID."""
+        user_id = input("Enter the user ID of the passenger to update: ")
         print(f"Updating passenger details for user ID: {user_id}")
 
-        # Choose the field to update
         field = input(
-            "Enter the field to update (title,firstName,lastName,DOB,email,phone,age): ")
+            "Enter the field to update (title, firstName, lastName, DOB, email, phone, age): "
+        )
         new_value = input(f"Enter the new value for {field}: ")
+
+        if field == "title":
+            if new_value not in self.valid_titles:
+                print("Error: Invalid title. Valid options are: Mr., Ms., Mrs., Miss, Dr.")
+                return
+        elif field == "DOB":
+            if not self.validate_date(new_value):
+                print("Error: Invalid date format. Please use YYYY-MM-DD.")
+                return
+        elif field == "phone":
+            if not self.validate_phone(new_value):
+                print("Error: Invalid phone number format. Please use xxx-xxx-xxxx.")
+                return
+        elif field == "email":
+            if not self.validate_email(new_value):
+                print("Error: Invalid email format.")
+                return
+            if self.email_exists(new_value):
+                print("Error: Email already exists in the system.")
+                return
+        elif field == "age":
+            if not self.validate_age(new_value):
+                print("Error: Age must be a positive integer.")
+                return
 
         try:
             sql = f"UPDATE Passenger SET {field} = ? WHERE user_id = ?"
-            super().get_cursor.execute(sql, (new_value, user_id))
-            super().get_connection.commit()  # Commit the changes
+            self.get_cursor.execute(sql, (new_value, user_id))
+            self.get_connection.commit()  # Commit the transaction
             print(f"User ID {user_id} updated successfully.")
         except Exception as e:
-            print(f"Error updating flight ID {user_id}: {e}")
-
-
+            print(f"Error updating passenger ID {user_id}: {e}")
 
     def view_passenger(self):
-        print("To view, enter either user ID or email, and leave the other blank!")
+        """View passenger details based on user ID or email."""
+        print("To view, enter either user ID or email, and leave the other blank.")
         user_id = input("Enter user ID (leave blank if unknown): ")
         email = input("Enter email (leave blank if unknown): ")
 
         try:
-            # Fetch a user based on user_id or email
-            if user_id:  # If user_id is provided
-                passenger = super().get_cursor.execute("SELECT * FROM Passenger WHERE user_id = ?;",
-                                                       (user_id,)).fetchone()
-            elif email:  # If email is provided
-                passenger = super().get_cursor.execute("SELECT * FROM Passenger WHERE email = ?;", (email,)).fetchone()
+            if user_id:
+                passenger = self.get_cursor.execute(
+                    "SELECT user_id, title, firstName, lastName, DOB, email, phone, age FROM Passenger WHERE user_id = ?;",
+                    (user_id,)
+                ).fetchone()
+            elif email:
+                passenger = self.get_cursor.execute(
+                    "SELECT user_id, title, firstName, lastName, DOB, email, phone, age FROM Passenger WHERE email = ?;",
+                    (email,)
+                ).fetchone()
             else:
-                print("Please provide either a user ID or an email.")
-                return None
+                print("Error: Please provide either a user ID or an email.")
+                return
 
             if passenger:
                 print(
-                    f"Passenger ID: {passenger[0]}, Name: {passenger[2]} {passenger[3]}, Email: {passenger[4]}, Phone: {passenger[5]}, Age: {passenger[6]}")
-                return passenger
+                    f"Passenger ID: {passenger[0]}, Title: {passenger[1]}, Name: {passenger[2]} {passenger[3]}, "
+                    f"DOB: {passenger[4]}, Email: {passenger[5]}, Phone: {passenger[6]}, Age: {passenger[7]}"
+                )
             else:
                 print("No passenger found with the given information.")
-                return None
-
         except Exception as e:
-            print("An error fetching passenger occurred:", e)
+            print("An error occurred while fetching the passenger:", e)
 
     def delete_passenger(self):
-        """Delete a passenger from the database based on Passenger ID."""
+        """Delete a passenger based on user ID."""
         passenger_id = input("Enter the Passenger ID to delete: ")
-        confirm = input(f"Are you sure you want to delete Passenger ID {passenger_id}? (yes/no): ")
+        confirm = input(f"Are you sure you want to delete Passenger ID {passenger_id}? (yes/no): ").lower()
 
-        if confirm.lower() == 'yes':
+        if confirm == 'yes':
             try:
-                super().get_cursor.execute("DELETE FROM Passenger WHERE user_id = ?", (passenger_id,))
-                super().get_connection.commit()  # Commit the transaction
+                self.get_cursor.execute("DELETE FROM Passenger WHERE user_id = ?", (passenger_id,))
+                self.get_connection.commit()
                 print(f"Passenger ID {passenger_id} deleted successfully.")
             except Exception as e:
                 print(f"Error deleting passenger ID {passenger_id}: {e}")
         else:
             print("Deletion cancelled.")
-
-
-
-
-
-
-
-
-
-    # def reset_database(self):
-    #     try:
-    #         # Reset the Passenger table by dropping it and recreating it
-    #         sql = """
-    #             DROP TABLE IF EXISTS Passenger;  -- Drop the table if it exists
-    #             CREATE TABLE Passenger (           -- Create a new Passenger table
-    #                 user_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,  -- Auto-incrementing user ID
-    #                 first_name TEXT NOT NULL,  -- First name of the passenger
-    #                 last_name TEXT NOT NULL,   -- Last name of the passenger
-    #                 email TEXT UNIQUE NOT NULL  -- Unique email for the passenger
-    #             );
-    #         """
-    #         super().execute_script(sql)  # Execute the SQL script
-    #         print("Users table successfully created.")  # Success message
-    #     except Exception as e:
-    #         # Print any errors that occur during the reset
-    #         print("An error resetting user occurred:", e)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- # self.user_id = row[0]
-#         self.title = row[1]  # Set the first name from the first column of the row
-#         self.firstName = row[2]   # Set the last name from the second column of the row
-#         self.lastName = row[3]
-#         self.DOB=row[4]
-#         self.email=row[5]
-#         self.phone=row[6]
-#         self.age=row[7]#set the values frm csv file to the passenger object
-#
-# # r_create_db()  # Uncomment to reset or create the database
-
-
-# class PassengerDatabase(db.DBbase):
-#     # Define a class that inherits from DBbase for handling CSV operations related to the database
-#     def __init__(self, row):
-#         # Initialize the User class and connect to the PassengerDB.sqlite database
-#         super().__init__("AirAsiaTicketingDB.sqlite")
-#     # def reset_or_create_db(self):
-#     #     # Method to drop and recreate the Passenger table
-#     #     try:
-#     #         sql = """
-#     #             DROP TABLE IF EXISTS Passenger;
-#     #
-#     #             CREATE TABLE Passenger (
-#     #                 user_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-#     #                 first_name TEXT NOT NULL,
-#     #                 last_name TEXT NOT NULL,
-#     #                 email TEXT UNIQUE NOT NULL
-#     #             );
-#     #         """
-#     #         super().execute_script(sql)  # Execute the SQL script to drop and create the table
-#     #
-#     #     except Exception as e:  # Catch any exceptions that occur
-#     #         print(e)  # Print the exception message
-#
-#     def read_passenger_data(self, file_name):
-#         # Method to read passenger data from a CSV file
-#         self.passenger_list = []  # Initialize an empty list to hold Passenger objects
-#
-#         try:
-#             with open(file_name, 'r') as record:  # Open the CSV file for reading
-#                 csv_contents = csv.reader(record)  # Create a CSV reader object
-#                 #next(record)  # Skip the header row
-#                 next(csv_contents)
-#                 for row in csv_contents:  # Iterate over the remaining rows in the CSV
-#                     # print(row)  # Uncomment to print each row for debugging
-#                     passenger = Passenger(row)  # Create a Passenger object for each row
-#                     self.passenger_list.append(passenger)  # Add the Passenger object to the list
-#
-#         except Exception as e:  # Catch any exceptions that occur
-#             print(e)  # Print the exception message
-#
-#     def save_to_database(self):
-#         # Method to save the passenger data to the database
-#         # print("Number of records to save: ", len(self.passenger_list))  # Print the number of records
-#         # save = input("Continue? (y/n)").lower()  # Prompt the user to confirm saving
-#
-#        # if save == "y":  # If the user confirms
-#             for item in self.passenger_list:  # Iterate over each Passenger object in the list
-#                 # User to clean data as needed (optional)
-#                 # item.first_name = item.first_name.replace("", "")
-#                 # item.last_name = item.last_name.replace("", "")
-#                 # item.email = item.email.replace("", "")
-#
-#                 try:
-#                     super().get_cursor.execute("""INSERT INTO Passenger
-#                     (user_id,title,firstName,lastName,DOB,email,phone,age)
-#                         VALUES(?,?,?,?)""",
-#                          (item.user_id,item.title,item.firstName, item.lastName,item.DOB,item.email,item.phone,item.age))  # Insert passenger data into the database
-#                     super().get_connection.commit()  # Commit the transaction to the database
-#
-#                     print("Saved item: ", item.firstName, item.lastName, item.email)  # Confirm save
-#                     super().execute_script("select * from Passenger")
-#                 except Exception as e:  # Catch any exceptions that occur during the insert
-#                     print(e)  # Print the exception message
-#             else:
-#                 print("Save to DB aborted")  # If the user doesn't confirm, print a message
-#
-# # Create an instance of CsvLab with the database filename
-# # passenger = Passenger_mod("PassengerDB.sqlite")
-# # passenger.reset_o
