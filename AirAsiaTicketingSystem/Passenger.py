@@ -125,15 +125,6 @@ class Passenger(db.DBbase):
 
 
 
-
-
-
-
-
-
-
-
-
  # self.user_id = row[0]
 #         self.title = row[1]  # Set the first name from the first column of the row
 #         self.firstName = row[2]   # Set the last name from the second column of the row
